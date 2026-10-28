@@ -342,3 +342,18 @@ async def synthesize(text: str, language: str) -> Path | None:
         wav_path.unlink(missing_ok=True)
         log.exception("Piper or ffmpeg unavailable / timed out")
         return None
+# --- Added for Render testing /search in 5 languages ---
+@app.get("/search")
+async def search(q: str):
+    lang = detect_text_language(q)
+    rows = find_polling_units(q)
+    if not rows:
+        return {"query": q, "language": lang, "result": "I never see am for my list, but check inec.gov.ng - Try Jalingo, Ikeja, Bodija, Amawbia, Gama", "rows": []}
+    # Use first match
+    row = rows[0]
+    reply = format_grounded_reply(row, lang)
+    return {"query": q, "language": lang, "reply": reply, "matches": rows}
+
+@app.get("/", response_class=PlainTextResponse)
+async def root():
+    return "VOTA is live! Try /health and /search?q=Jalingo"
