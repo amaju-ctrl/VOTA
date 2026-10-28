@@ -1,0 +1,1 @@
+"""VOTA application package."""

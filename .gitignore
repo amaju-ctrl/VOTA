@@ -1,0 +1,11 @@
+.env
+.venv/
+__pycache__/
+.pytest_cache/
+*.py[cod]
+*.onnx
+*.onnx.json
+voices/
+*.wav
+*.ogg
+*.m4a
