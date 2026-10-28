@@ -357,3 +357,51 @@ async def search(q: str):
 @app.get("/", response_class=PlainTextResponse)
 async def root():
     return "VOTA is live! Try /health and /search?q=Jalingo"
+# --- USSD FOR FEATURE PHONES (NO SMARTPHONE NEEDED) - FREE via Africa's Talking ---
+# This endpoint makes VOTA work on *384*... codes for village phones
+from fastapi import Form
+
+@app.post("/ussd", response_class=PlainTextResponse)
+async def ussd_callback(
+    session_id: str = Form(None, alias="sessionId"),
+    phone_number: str = Form(None, alias="phoneNumber"),
+    text: str = Form("", alias="text")
+):
+    """
+    Africa's Talking USSD format:
+    text = user input, e.g. "" (first dial), "1", "1*Jalingo"
+    We reply with CON (continue) or END (stop)
+    """
+    # Normalize
+    user_input = (text or "").strip()
+    parts = user_input.split("*") if user_input else []
+    last = parts[-1].lower() if parts else ""
+
+    # Step 1: Welcome
+    if not user_input:
+        return "CON VOTA - Your Vote, Your Language\nFind Polling Unit FREE\n1. Enter your area (e.g. Jalingo, Ikeja, Amawbia, Gama, Bodija)\n2. Hausa/Igbo/Yoruba/Pidgin/English\n\nEnter area:"
+
+    # Step 2: User entered area
+    query = last if last else user_input
+    rows = find_polling_units(query)
+    lang = detect_text_language(query)
+    
+    if not rows:
+        return f"END I never see {query} for my list. Try Jalingo, Ikeja, Amawbia, Gama, Bodija. Check inec.gov.ng - VOTA"
+
+    row = rows[0]
+    reply = format_grounded_reply(row, lang)
+    # USSD has 160 char limit, trim
+    short_reply = reply[:150]
+    return f"END {short_reply}\nVOTA - Voice Of The Area"
+
+@app.get("/ussd")
+async def ussd_info():
+    return {
+        "service": "VOTA USSD",
+        "how_it_works": "Dial *384*12345# (Africa's Talking sandbox) -> Enter area -> Get polling unit",
+        "test_web": "Use /search?q=Jalingo for web test",
+        "free": "No smartphone needed, works on Nokia small phones, free via Africa's Talking sandbox",
+        "languages": ["hausa","igbo","yoruba","pidgin","english"]
+    }
+    
